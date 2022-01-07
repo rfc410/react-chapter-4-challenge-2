@@ -19,7 +19,7 @@ export default function Home(): JSX.Element {
   } = useInfiniteQuery(
     'images',
     ({ pageParam = null }) => {
-      return api.get(pageParam ? `/api/images?after=${pageParam}` : 'api/images')
+      return api.get('api/images')
     },
     {
       getNextPageParam: (nextPage) => nextPage.data.after
