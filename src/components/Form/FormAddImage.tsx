@@ -18,21 +18,54 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
 
   const formValidations = {
     image: {
-      // TODO REQUIRED, LESS THAN 10 MB AND ACCEPTED FORMATS VALIDATIONS
+      required: 'Arquivo obrigatório',
+      validate: {
+        acceptedFormats: (fileList) => {
+          const ACCEPTED_FORMATS = ['image/gif', 'image/jpeg', 'image/png']
+          const [image] = fileList
+          return (
+            ACCEPTED_FORMATS.includes(image.type) ||
+            'Somente são aceitos arquivos PNG, JPEG e GIF'
+          )
+        },
+        lessThan10MB: (fileList) => {
+          const TEN_MEGABYTES = 10 * 1024 * 1024
+          const [image] = fileList
+          return (
+            image.size < TEN_MEGABYTES || 'O arquivo deve ser menor que 10MB'
+          )
+        }
+      }
     },
     title: {
-      // TODO REQUIRED, MIN AND MAX LENGTH VALIDATIONS
+      maxLength: {
+        message: 'Máximo de 20 caracteres',
+        value: 20
+      },
+      minLength: {
+        message: 'Mínimo de 2 caracteres',
+        value: 2
+      },
+      required: 'Título obrigatório'
     },
     description: {
-      // TODO REQUIRED, MAX LENGTH VALIDATIONS
+      maxLength: {
+        message: 'Máximo de 65 caracteres',
+        value: 65
+      },
+      required: 'Descrição obrigatória'
     },
   };
 
   const queryClient = useQueryClient();
   const mutation = useMutation(
-    // TODO MUTATION API POST REQUEST,
+    async (imageData) => {
+      await api.post('api/images', imageData)
+    },
     {
-      // TODO ONSUCCESS MUTATION
+      onSuccess: () => {
+        queryClient.invalidateQueries('images')
+      }
     }
   );
 
@@ -46,15 +79,42 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
   } = useForm();
   const { errors } = formState;
 
-  const onSubmit = async (data: Record<string, unknown>): Promise<void> => {
+  const onSubmit = async (data): Promise<void> => {
     try {
-      // TODO SHOW ERROR TOAST IF IMAGE URL DOES NOT EXISTS
-      // TODO EXECUTE ASYNC MUTATION
-      // TODO SHOW SUCCESS TOAST
-    } catch {
-      // TODO SHOW ERROR TOAST IF SUBMIT FAILED
+      if (!imageUrl) {
+        toast({
+          title: 'Imagem não adicionada',
+          description: 'É preciso adicionar e aguardar o upload de uma imagem antes de realizar o cadastro.',
+          status: 'error',
+          duration: 9000,
+          isClosable: true,
+        })
+        return
+      }
+
+      const { description, title } = data
+      const payload = { description, title, url: imageUrl }
+      // @ts-ignore
+      await mutation.mutateAsync(payload)
+
+      toast({
+        title: 'Imagem cadastrada',
+        description: 'Sua imagem foi cadastrada com sucesso.',
+        status: 'success',
+        duration: 9000,
+        isClosable: true,
+      })
+    } catch (error) {
+      toast({
+        title: 'Falha no cadastro',
+        description: 'Ocorreu um erro ao tentar cadastrar a sua imagem.',
+        status: 'error',
+        duration: 9000,
+        isClosable: true,
+      })
     } finally {
       // TODO CLEAN FORM, STATES AND CLOSE MODAL
+      closeModal()
     }
   };
 
@@ -62,25 +122,28 @@ export function FormAddImage({ closeModal }: FormAddImageProps): JSX.Element {
     <Box as="form" width="100%" onSubmit={handleSubmit(onSubmit)}>
       <Stack spacing={4}>
         <FileInput
-          setImageUrl={setImageUrl}
+          error={errors.image}
           localImageUrl={localImageUrl}
-          setLocalImageUrl={setLocalImageUrl}
+          name="image"
           setError={setError}
+          setImageUrl={setImageUrl}
+          setLocalImageUrl={setLocalImageUrl}
           trigger={trigger}
-          // TODO SEND IMAGE ERRORS
-          // TODO REGISTER IMAGE INPUT WITH VALIDATIONS
+          {...register('image', formValidations.image)}
         />
 
         <TextInput
+          error={errors.title}
           placeholder="Título da imagem..."
-          // TODO SEND TITLE ERRORS
-          // TODO REGISTER TITLE INPUT WITH VALIDATIONS
+          name="title"
+          {...register('title', formValidations.title)}
         />
 
         <TextInput
+          error={errors.description}
           placeholder="Descrição da imagem..."
-          // TODO SEND DESCRIPTION ERRORS
-          // TODO REGISTER DESCRIPTION INPUT WITH VALIDATIONS
+          name="description"
+          {...register('description', formValidations.description)}
         />
       </Stack>
 
